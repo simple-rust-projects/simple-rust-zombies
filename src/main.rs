@@ -128,6 +128,7 @@ fn main() {
                 board.set(player.pos, PLAYER_GLYPH);
                 do_move(&mut board, &mut player, &mut zombies, (0, 0))
             }
+            [b'\x03'] => WinCondition::Lose,
             _ => WinCondition::None,
         };
         board.draw();
