@@ -25,6 +25,12 @@ struct Player {
 
 struct Board([[char; BOARD_WIDTH]; BOARD_HEIGHT]);
 
+enum WinCondition {
+    None,
+    Win,
+    Lose,
+}
+
 impl Board {
     fn set(&mut self, pos: (usize, usize), glyph: char) {
         self.0[pos.1][pos.0] = glyph;
@@ -104,7 +110,7 @@ fn main() {
     loop {
         let mut buf = [0_u8; 1];
         let r = std::io::stdin().read(&mut buf).unwrap();
-        let stop = match &buf[0..r] {
+        let win = match &buf[0..r] {
             [b'q'] => do_move(&mut board, &mut player, &mut zombies, (-1, -1)),
             [b'w'] => do_move(&mut board, &mut player, &mut zombies, (0, -1)),
             [b'e'] => do_move(&mut board, &mut player, &mut zombies, (1, -1)),
@@ -122,24 +128,31 @@ fn main() {
                 board.set(player.pos, PLAYER_GLYPH);
                 do_move(&mut board, &mut player, &mut zombies, (0, 0))
             }
-            [3] => true,
-            _ => false,
+            _ => WinCondition::None,
         };
         board.draw();
-        if stop {
-            break;
+        match win {
+            WinCondition::None => (),
+            WinCondition::Win => {
+                println!("You win!");
+                break;
+            }
+            WinCondition::Lose => {
+                println!("You lose!");
+                break;
+            }
         }
     }
 }
 
-fn do_move(board: &mut Board, player: &mut Player, zombies: &mut Vec<Zombie>, dir: (i32, i32)) -> bool {
+fn do_move(board: &mut Board, player: &mut Player, zombies: &mut Vec<Zombie>, dir: (i32, i32)) -> WinCondition {
     let new_pos = (
         (player.pos.0 as i32 + dir.0) as usize,
         (player.pos.1 as i32 + dir.1) as usize
     );
 
     if dir != (0, 0) && board.get(new_pos) != EMPTY_GLYPH {
-        return false;
+        return WinCondition::None;
     }
 
     board.set(player.pos, EMPTY_GLYPH);
@@ -170,8 +183,7 @@ fn do_move(board: &mut Board, player: &mut Player, zombies: &mut Vec<Zombie>, di
                 PLAYER_GLYPH => {
                      // Player dies.
                     board.set(new_zombie_pos, ZOMBIE_GLYPH); zombie.pos = new_zombie_pos;
-                    println!("munch munch!");
-                    return true
+                    return WinCondition::Lose;
                 }
                 ZOMBIE_GLYPH => {
                     // Zombie collision.
@@ -184,7 +196,8 @@ fn do_move(board: &mut Board, player: &mut Player, zombies: &mut Vec<Zombie>, di
 
     let win = zombies.iter().all(|z| z.is_dead);
     if win {
-        println!("You win!");
+        WinCondition::Win
+    } else {
+        WinCondition::None
     }
-    win
 }
